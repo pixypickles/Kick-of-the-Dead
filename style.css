@@ -84,3 +84,35 @@ button:active,button.active{transform:scale(.94);filter:brightness(1.35)}
   #gameWrap{border-radius:9px}
   #hud>div{padding:6px}
 }
+
+
+#difficultyOverlay{
+  position:absolute;inset:0;z-index:20;display:grid;place-items:center;
+  background:
+    radial-gradient(circle at 50% 35%,rgba(80,0,0,.32),transparent 42%),
+    rgba(0,0,0,.84);
+  padding:20px
+}
+#difficultyOverlay.hidden{display:none}
+.difficulty-panel{
+  width:min(92%,560px);padding:24px;border:1px solid #666;border-radius:18px;
+  background:rgba(20,20,20,.96);text-align:center;box-shadow:0 14px 45px rgba(0,0,0,.45)
+}
+.difficulty-panel h2{
+  margin:0 0 6px;letter-spacing:.13em;font-size:clamp(1.55rem,4.5vw,2.5rem)
+}
+.difficulty-subtitle{margin:0 0 18px;opacity:.82}
+.difficulty-buttons{display:grid;gap:12px}
+.difficulty-buttons button{
+  width:100%;display:grid;gap:4px;padding:15px 18px;border:1px solid #555;
+  border-radius:14px;background:#222;color:#fff;text-align:left
+}
+.difficulty-buttons button strong{
+  font-size:clamp(1.05rem,3vw,1.35rem);letter-spacing:.08em
+}
+.difficulty-buttons button span{font-size:.85rem;opacity:.78}
+.difficulty-buttons button.recommended{
+  border-color:#c48a20;background:linear-gradient(180deg,#382b10,#241d10)
+}
+.difficulty-buttons button:active{transform:scale(.985)}
+#loadingHint{margin:16px 0 0;font-size:.8rem;opacity:.65}

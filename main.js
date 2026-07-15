@@ -12,10 +12,39 @@
   const finalScoreEl = document.getElementById("finalScore");
   const restartBtn = document.getElementById("restart");
   const statusMessage = document.getElementById("statusMessage");
+  const difficultyOverlay = document.getElementById("difficultyOverlay");
+  const loadingHint = document.getElementById("loadingHint");
 
   const W = canvas.width;
   const H = canvas.height;
   const GROUND = 610;
+
+  const difficultyConfigs = {
+    easy: {
+      label:"EASY",
+      hp:8,
+      enemySpeed:0.82,
+      spawnScale:1.25,
+      specialGain:20,
+      invuln:1550
+    },
+    normal: {
+      label:"NORMAL",
+      hp:5,
+      enemySpeed:1.0,
+      spawnScale:1.0,
+      specialGain:14,
+      invuln:1250
+    },
+    hard: {
+      label:"HARD",
+      hp:3,
+      enemySpeed:1.22,
+      spawnScale:0.78,
+      specialGain:10,
+      invuln:900
+    }
+  };
 
   const imageFiles = {
     neutral: "neutral.png",
@@ -57,14 +86,19 @@
 
   let state;
 
-  function resetGame() {
+  function resetGame(difficultyName = state?.difficultyName || "normal") {
+    const config = difficultyConfigs[difficultyName];
+
     state = {
       running:true,
+      started:true,
+      difficultyName,
+      difficulty:config,
       score:0,
-      hp:5,
+      hp:config.hp,
       special:0,
       elapsed:0,
-      spawnTimer:800,
+      spawnTimer:900,
       facing:1,
       enemies:[],
       particles:[],
@@ -74,7 +108,9 @@
         invuln:0,specialTimer:0
       }
     };
+
     overlay.classList.add("hidden");
+    difficultyOverlay.classList.add("hidden");
     updateHud();
   }
 
@@ -130,7 +166,13 @@
     button.addEventListener("pointerleave", release);
   });
 
-  restartBtn.addEventListener("click", resetGame);
+  document.querySelectorAll("[data-difficulty]").forEach(button => {
+    button.addEventListener("click", () => {
+      resetGame(button.dataset.difficulty);
+    });
+  });
+
+  restartBtn.addEventListener("click", () => resetGame(state?.difficultyName || "normal"));
 
   function onPress(key) {
     if (!state?.running) return;
@@ -188,6 +230,8 @@
       const height = Math.random() < .35 ? 5 : 4;
       enemy = {type:"demon",height,speed:108,score:220,y:height===5?235:330};
     }
+
+    enemy.speed *= state.difficulty.enemySpeed;
 
     state.enemies.push({
       ...enemy,
@@ -251,7 +295,7 @@
     if (enemy.dead) return;
     enemy.dead = true;
     state.score += enemy.score;
-    state.special = Math.min(100, state.special + 14);
+    state.special = Math.min(100, state.special + state.difficulty.specialGain);
     burst(enemy.x, enemy.y - 70, 12);
     updateHud();
   }
@@ -323,9 +367,10 @@
         !e.dead && e.side === state.enemies[state.enemies.length-1]?.side &&
         (e.side < 0 ? e.x < 170 : e.x > W-170)
       );
-      state.spawnTimer =
+      state.spawnTimer = (
         (sameSideNearEdge ? 850 : Math.max(560,1250-state.elapsed*.012))
-        + Math.random()*420;
+        + Math.random()*420
+      ) * state.difficulty.spawnScale;
     }
 
     for (const e of state.enemies) {
@@ -336,7 +381,7 @@
         if (p.specialTimer > 0) {
           defeatEnemy(e);
         } else if (p.invuln <= 0) {
-          p.invuln = 1250;
+          p.invuln = state.difficulty.invuln;
           state.hp -= 1;
           e.dead = true;
           for (const other of state.enemies) {
@@ -512,10 +557,18 @@
       ctx.fillText("MACHINE GUN MASTER!",W/2,88);
     }
 
-    if (imageReadyCount < imageTotal) {
-      setStatus(`画像読み込み中 ${imageReadyCount}/${imageTotal}`);
-    } else if (imageFailedCount > 0) {
-      setStatus(`画像${imageFailedCount}件を読めません。代替表示で動作中。`);
+    if (loadingHint) {
+      if (imageReadyCount < imageTotal) {
+        loadingHint.textContent = `画像をバックグラウンドで読み込み中 ${imageReadyCount}/${imageTotal}`;
+      } else if (imageFailedCount > 0) {
+        loadingHint.textContent = `一部画像を読み込めませんが、そのまま遊べます`;
+      } else {
+        loadingHint.textContent = "準備完了";
+      }
+    }
+
+    if (state?.started && imageFailedCount > 0) {
+      setStatus(`画像${imageFailedCount}件は代替表示になります`);
     } else {
       setStatus("");
     }
@@ -527,7 +580,7 @@
     last = now;
 
     try {
-      if (imageReadyCount >= imageTotal) update(dt);
+      if (state?.started) update(dt);
       draw();
     } catch (error) {
       console.error(error);
@@ -537,6 +590,24 @@
     requestAnimationFrame(loop);
   }
 
-  resetGame();
+  state = {
+    running:false,
+    started:false,
+    difficultyName:"normal",
+    difficulty:difficultyConfigs.normal,
+    score:0,
+    hp:5,
+    special:0,
+    elapsed:0,
+    enemies:[],
+    particles:[],
+    facing:1,
+    player:{
+      x:W/2,y:GROUND,vy:0,grounded:true,
+      action:"neutral",actionTimer:0,hitDone:false,attackSerial:0,
+      invuln:0,specialTimer:0
+    }
+  };
+  updateHud();
   requestAnimationFrame(loop);
 })();

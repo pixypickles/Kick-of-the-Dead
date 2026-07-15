@@ -39,6 +39,33 @@
         </div>
       </div>
 
+
+      <div id="difficultyOverlay">
+        <div class="difficulty-panel">
+          <h2>KICK OF THE DEAD</h2>
+          <p class="difficulty-subtitle">難易度を選んでください</p>
+
+          <div class="difficulty-buttons">
+            <button data-difficulty="easy">
+              <strong>EASY</strong>
+              <span>HP 8・敵が遅い・必殺がたまりやすい</span>
+            </button>
+
+            <button data-difficulty="normal" class="recommended">
+              <strong>NORMAL</strong>
+              <span>HP 5・標準バランス</span>
+            </button>
+
+            <button data-difficulty="hard">
+              <strong>HARD</strong>
+              <span>HP 3・敵が速い・出現間隔が短い</span>
+            </button>
+          </div>
+
+          <p id="loadingHint">画像をバックグラウンドで読み込み中…</p>
+        </div>
+      </div>
+
       <div id="statusMessage"></div>
 
       <div id="overlay" class="hidden">

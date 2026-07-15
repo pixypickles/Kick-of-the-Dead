@@ -46,15 +46,14 @@
     }
   };
 
-  // Hit lanes are actual vertical positions on the canvas.
-  // Enemies are drawn around these lanes so their visible position matches
-  // the kick that can hit them.
+  // Four attack lanes calibrated to the actual kick artwork.
+  // The previous numeric levels were visually too low:
+  // middle kick matched the old lane 3, and high kick matched the old lane 4.
   const heightLanes = {
-    1: { hitY: 555, baseY: 625 }, // low kick
-    2: { hitY: 470, baseY: 610 }, // middle kick
-    3: { hitY: 365, baseY: 520 }, // high kick
-    4: { hitY: 265, baseY: 350 }, // normal jump attack
-    5: { hitY: 170, baseY: 255 }  // high jump attack
+    1: { label:"LOW",  hitY:555, baseY:625 }, // low kick
+    2: { label:"MID",  hitY:365, baseY:455 }, // middle kick
+    3: { label:"HIGH", hitY:265, baseY:350 }, // high kick
+    4: { label:"TOP",  hitY:170, baseY:255 }  // jump attack / highest lane
   };
 
 
@@ -255,34 +254,33 @@
     const r = Math.random();
 
     let enemy;
-    if (r < .31) {
+    if (r < .34) {
       enemy = {
-        type:"zombieDog",
+        type:"skullLow",
         height:1,
-        speed:125,
+        speed:118,
         score:130
       };
-    } else if (r < .62) {
+    } else if (r < .67) {
       enemy = {
-        type:"floatingSkull",
+        type:"skullMid",
         height:2,
-        speed:100,
-        score:150
+        speed:102,
+        score:155
       };
-    } else if (r < .85) {
+    } else if (r < .88) {
       enemy = {
-        type:"zombieCrow",
+        type:"batHigh",
         height:3,
         speed:112,
-        score:180
+        score:185
       };
     } else {
-      const height = Math.random() < .35 ? 5 : 4;
       enemy = {
-        type:"demon",
-        height,
+        type:"batTop",
+        height:4,
         speed:108,
-        score:220
+        score:230
       };
     }
 
@@ -305,21 +303,12 @@
     if (a === "low") return 1;
     if (a === "mid") return 2;
     if (a === "high") return 3;
-    if (a === "jumpAttack") return state.player.y < 360 ? 5 : 4;
+    if (a === "jumpAttack") return 4;
     return 0;
   }
 
   function currentAttackY() {
-    const p = state.player;
     const height = currentAttackHeight();
-
-    if (height === 4 || height === 5) {
-      // Air attack height follows the player, but snaps near the intended lane.
-      const laneY = heightLanes[height].hitY;
-      const playerKickY = p.y - 185;
-      return (laneY + playerKickY) / 2;
-    }
-
     return heightLanes[height]?.hitY ?? GROUND;
   }
 
@@ -342,7 +331,7 @@
     const height = currentAttackHeight();
     const attackY = currentAttackY();
     const horizontalRange = p.action === "jumpAttack" ? 335 : 285;
-    const verticalTolerance = p.action === "jumpAttack" ? 85 : 70;
+    const verticalTolerance = p.action === "jumpAttack" ? 90 : 72;
     let hitsThisFrame = 0;
 
     for (const e of state.enemies) {
@@ -529,112 +518,77 @@
     ctx.translate(e.x,e.y);
     ctx.scale(e.side,1);
 
-    if (e.type === "zombieDog") {
-      // Low target: compact dog body at ankle height.
-      ctx.fillStyle = "#4f774f";
-      ctx.beginPath();
-      ctx.ellipse(0,-28,52,24,0,0,Math.PI*2);
-      ctx.fill();
+    const isSkull = e.type === "skullLow" || e.type === "skullMid";
+    const isBat = e.type === "batHigh" || e.type === "batTop";
+
+    if (isSkull) {
+      // Single-point target centered on the skull.
+      const size = e.type === "skullLow" ? 35 : 40;
+
+      ctx.fillStyle = "#e9e3d2";
+      ctx.strokeStyle = "#716c63";
+      ctx.lineWidth = 6;
 
       ctx.beginPath();
-      ctx.arc(42,-38,24,0,Math.PI*2);
-      ctx.fill();
-
-      ctx.fillStyle = "#263c28";
-      ctx.beginPath();
-      ctx.moveTo(35,-56);
-      ctx.lineTo(48,-78);
-      ctx.lineTo(55,-50);
-      ctx.fill();
-
-      ctx.strokeStyle = "#263c28";
-      ctx.lineWidth = 10;
-      ctx.beginPath();
-      ctx.moveTo(-28,-12); ctx.lineTo(-34,8);
-      ctx.moveTo(15,-10); ctx.lineTo(20,8);
-      ctx.stroke();
-
-      ctx.fillStyle = "#d7ff62";
-      ctx.fillRect(48,-43,7,7);
-
-    } else if (e.type === "floatingSkull") {
-      // Mid target: only the skull itself floats at the hit lane.
-      ctx.fillStyle = "#e8e2d0";
-      ctx.strokeStyle = "#736f66";
-      ctx.lineWidth = 7;
-      ctx.beginPath();
-      ctx.arc(0,-92,42,0,Math.PI*2);
+      ctx.arc(0,-size,size,0,Math.PI*2);
       ctx.fill();
       ctx.stroke();
 
-      ctx.fillStyle = "#2a2525";
+      ctx.fillStyle = "#292525";
       ctx.beginPath();
-      ctx.arc(-15,-100,10,0,Math.PI*2);
-      ctx.arc(15,-100,10,0,Math.PI*2);
+      ctx.arc(-size*.35,-size*1.12,size*.24,0,Math.PI*2);
+      ctx.arc(size*.35,-size*1.12,size*.24,0,Math.PI*2);
       ctx.fill();
 
-      ctx.fillRect(-15,-70,30,18);
-      ctx.fillStyle = "#e8e2d0";
-      for(let i=-10;i<=10;i+=10){
-        ctx.fillRect(i,-70,5,18);
+      ctx.fillRect(-size*.42,-size*.58,size*.84,size*.42);
+
+      ctx.fillStyle = "#e9e3d2";
+      for (let i=-2;i<=2;i++) {
+        ctx.fillRect(i*size*.16-size*.045,-size*.58,size*.09,size*.42);
       }
 
-    } else if (e.type === "zombieCrow") {
-      // High target: flying crow, centered on the upper kick lane.
-      ctx.fillStyle = "#25252b";
+      // A faint glow makes the floating mid skull easier to read.
+      if (e.type === "skullMid") {
+        ctx.strokeStyle = "rgba(160,220,255,.45)";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(0,-size,size+9,0,Math.PI*2);
+        ctx.stroke();
+      }
+
+    } else if (isBat) {
+      // Single-point target centered on the bat's body.
+      const scale = e.type === "batTop" ? 1.08 : 1;
+
+      ctx.scale(scale,scale);
+      ctx.fillStyle = e.type === "batTop" ? "#5b2030" : "#24242b";
+
       ctx.beginPath();
-      ctx.ellipse(0,-68,38,24,0,0,Math.PI*2);
+      ctx.ellipse(0,-45,32,22,0,0,Math.PI*2);
       ctx.fill();
 
       ctx.beginPath();
-      ctx.moveTo(-15,-72);
-      ctx.lineTo(-72,-112);
-      ctx.lineTo(-48,-54);
+      ctx.moveTo(-12,-48);
+      ctx.lineTo(-68,-88);
+      ctx.lineTo(-48,-32);
       ctx.fill();
 
       ctx.beginPath();
-      ctx.moveTo(15,-72);
-      ctx.lineTo(72,-112);
-      ctx.lineTo(48,-54);
+      ctx.moveTo(12,-48);
+      ctx.lineTo(68,-88);
+      ctx.lineTo(48,-32);
       ctx.fill();
 
-      ctx.beginPath();
-      ctx.moveTo(30,-72);
-      ctx.lineTo(70,-60);
-      ctx.lineTo(32,-52);
-      ctx.fill();
-
-      ctx.fillStyle = "#a8ff54";
-      ctx.fillRect(18,-77,7,7);
-
-    } else {
-      // Highest lanes unchanged: flying demon.
-      ctx.fillStyle="#7e2c2c";
-      ctx.beginPath();
-      ctx.arc(0,-42,32,0,Math.PI*2);
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.moveTo(-25,-50);
-      ctx.lineTo(-76,-92);
-      ctx.lineTo(-55,-25);
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.moveTo(25,-50);
-      ctx.lineTo(76,-92);
-      ctx.lineTo(55,-25);
-      ctx.fill();
-
-      ctx.fillStyle="#ffdc5c";
-      ctx.fillRect(-16,-48,8,8);
-      ctx.fillRect(8,-48,8,8);
+      ctx.fillStyle = e.type === "batTop" ? "#ffd45c" : "#9cff59";
+      ctx.fillRect(-13,-51,7,7);
+      ctx.fillRect(6,-51,7,7);
     }
 
+    // Keep the temporary lane number visible for testing.
     ctx.fillStyle="#fff";
     ctx.font="700 18px sans-serif";
     ctx.textAlign="center";
-    ctx.fillText(String(e.height),0,e.type==="demon"?12:24);
+    ctx.fillText(String(e.height),0,22);
     ctx.restore();
   }
 

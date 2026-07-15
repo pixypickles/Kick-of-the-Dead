@@ -1,56 +1,51 @@
-# Kick of the Dead
+# Kick of the Dead v0.2
 
-テコンドー師範が左右から迫るアンデッドを蹴りで倒し、必殺技ではマシンガンを乱射するスマホ向けHTML5アクションゲームの試作版です。
+GitHub Pages向けのHTML5アクションゲーム試作版です。
 
-## 遊び方
+## GitHubへのアップロード
 
-- `← / →`：向きを変える
-- `X`：中段蹴り
-- `↑ + X`：上段蹴り
-- `↓ + X`：下段蹴り
-- `Z`：ジャンプ
-- `↑ + Z`：高ジャンプ
-- 空中で `X`：ジャンプ回転蹴り
-- `Space`：必殺技（ゲージ100%時）
+このZIPを展開し、**中に入っているファイルをすべてリポジトリ直下へアップロード**してください。
 
-スマホでは画面上のボタンを使用します。
+重要：`index.html`、`main.js`、`style.css` と各PNG画像が、同じ階層に置かれる構成です。
 
-## 起動方法
-
-`index.html` をブラウザで開くだけで動きます。ローカルファイル制限がある環境では、簡易HTTPサーバーを使ってください。
-
-```bash
-python -m http.server 8000
+```text
+/
+├── index.html
+├── main.js
+├── style.css
+├── neutral.png
+├── mid_kick_start.png
+├── mid_kick_hit.png
+├── low_kick_start.png
+├── low_kick_hit.png
+├── high_kick_start.png
+├── high_kick_hit.png
+├── jump.png
+├── jump_attack_start.png
+├── jump_attack_hit.png
+├── landing.png
+├── special_pickup.png
+└── special_fire.png
 ```
 
-その後、ブラウザで `http://localhost:8000` を開きます。
+以前のファイルを残したままでも構いませんが、同名ファイルは上書きしてください。
 
-## GitHub Pages
+## 操作
 
-1. このフォルダをGitHubリポジトリへアップロード
-2. Repository Settings → Pages
-3. Deploy from a branch を選択
-4. `main` / root を指定
+- 左／右：向き変更
+- KICK：中段蹴り
+- 上＋KICK：上段蹴り
+- 下＋KICK：下段蹴り
+- JUMP：通常ジャンプ
+- 上＋JUMP：高ジャンプ
+- 空中KICK：ジャンプ回転蹴り
+- SPECIAL：ゲージ100%時にマシンガン
 
-## 現在の状態
+## v0.2の変更
 
-- 地上3段攻撃
-- 通常／高ジャンプ
-- ジャンプ攻撃
-- 左右反転
-- 敵4タイプ
-- 高さ判定
+- リポジトリ直下のPNG画像を直接読み込むよう統一
+- 画像読み込み失敗時もゲームを継続
+- スマホ用タッチ操作
+- 敵4種、高さ1〜5
 - HP、スコア、必殺ゲージ
 - マシンガン必殺技
-
-画像はコンセプト素材をそのまま使っているため、白背景やフレーム間の位置ずれがあります。製品版では背景透過・キャンバス統一・アンカー調整が必要です。
-
-
-## v0.1.1 修正
-
-- 画像が404または破損していてもゲームループが停止しないよう修正
-- 読み込めない画像は代替キャラクターで表示
-- GitHub PagesのベースURLから画像パスを解決
-- フレーム実行エラーを画面とコンソールへ表示
-
-GitHub上では、このZIPの中身で既存ファイルを上書きしてください。特に `main.js` の更新が必須です。

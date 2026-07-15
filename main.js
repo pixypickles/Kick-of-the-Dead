@@ -33,14 +33,25 @@
   };
 
   const images = {};
+  const imageStatus = {};
   let loaded = 0;
+  let failed = 0;
   const total = Object.keys(imageFiles).length;
 
   for (const [key, file] of Object.entries(imageFiles)) {
     const img = new Image();
-    img.src = `assets/player/concept/${file}`;
-    img.onload = () => loaded++;
-    img.onerror = () => loaded++;
+    imageStatus[key] = "loading";
+    img.onload = () => {
+      imageStatus[key] = "loaded";
+      loaded++;
+    };
+    img.onerror = () => {
+      imageStatus[key] = "failed";
+      loaded++;
+      failed++;
+      console.warn(`[Kick of the Dead] image failed: ${img.src}`);
+    };
+    img.src = new URL(`assets/player/concept/${file}`, document.baseURI).href;
     images[key] = img;
   }
 
@@ -388,6 +399,31 @@
     ctx.restore();
   }
 
+  function drawFallbackPlayer() {
+    ctx.save();
+    ctx.fillStyle = "#f4f4f4";
+    ctx.strokeStyle = "#171717";
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.arc(0, -210, 48, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = "#111";
+    ctx.fillRect(-42, -160, 84, 110);
+    ctx.fillStyle = "#f4f4f4";
+    ctx.fillRect(-34, -150, 68, 94);
+    ctx.strokeRect(-34, -150, 68, 94);
+    ctx.strokeStyle = "#111";
+    ctx.lineWidth = 12;
+    ctx.beginPath();
+    ctx.moveTo(-18, -55);
+    ctx.lineTo(-34, 0);
+    ctx.moveTo(18, -55);
+    ctx.lineTo(34, 0);
+    ctx.stroke();
+    ctx.restore();
+  }
+
   function drawPlayer() {
     const p = state.player;
     const img = currentPlayerImage();
@@ -400,11 +436,15 @@
 
     const h = p.action === "special" ? 430 : 390;
     const w = h;
-    if (img && img.complete) {
-      ctx.drawImage(img, -w/2, -h + 40, w, h);
+    if (img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0) {
+      try {
+        ctx.drawImage(img, -w/2, -h + 40, w, h);
+      } catch (error) {
+        console.warn("[Kick of the Dead] drawImage failed; using fallback player.", error);
+        drawFallbackPlayer();
+      }
     } else {
-      ctx.fillStyle = "#f5f5f5";
-      ctx.fillRect(-45,-180,90,160);
+      drawFallbackPlayer();
     }
     ctx.restore();
   }
@@ -433,12 +473,19 @@
     }
 
     if (loaded < total) {
-      ctx.fillStyle = "rgba(0,0,0,.65)";
+      ctx.fillStyle = "rgba(0,0,0,.55)";
       ctx.fillRect(0,0,W,H);
       ctx.fillStyle = "#fff";
-      ctx.font = "700 36px sans-serif";
+      ctx.font = "700 34px sans-serif";
       ctx.textAlign = "center";
       ctx.fillText(`LOADING ${loaded}/${total}`, W/2, H/2);
+    } else if (failed > 0) {
+      ctx.fillStyle = "rgba(120,0,0,.82)";
+      ctx.fillRect(12, 12, 430, 46);
+      ctx.fillStyle = "#fff";
+      ctx.font = "700 20px sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText(`画像 ${failed}件を読めません。代替表示で動作中。`, 24, 43);
     }
   }
 
@@ -446,8 +493,20 @@
   function loop(now) {
     const dt = Math.min(34, now - last);
     last = now;
-    if (loaded >= total) update(dt);
-    draw();
+    try {
+      if (loaded >= total) update(dt);
+      draw();
+    } catch (error) {
+      console.error("[Kick of the Dead] frame error", error);
+      ctx.save();
+      ctx.fillStyle = "rgba(120,0,0,.9)";
+      ctx.fillRect(0, 0, W, 84);
+      ctx.fillStyle = "#fff";
+      ctx.font = "700 22px sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("実行エラーが発生しました。ブラウザの再読み込みを試してください。", 22, 50);
+      ctx.restore();
+    }
     requestAnimationFrame(loop);
   }
 

@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+  <meta name="theme-color" content="#151515" />
+  <title>Kick of the Dead</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main id="game-shell">
+    <header>
+      <h1>KICK OF THE DEAD</h1>
+      <p>左右と高さを見切って、師範の蹴りでアンデッドを倒せ。</p>
+    </header>
+
+    <section id="hud">
+      <div>HP <span id="hp">5</span></div>
+      <div>SCORE <span id="score">0</span></div>
+      <div>SPECIAL <span id="specialText">0%</span></div>
+    </section>
+
+    <div id="specialBar"><div id="specialFill"></div></div>
+
+    <section id="game-wrap">
+      <canvas id="game" width="1280" height="720" aria-label="Kick of the Dead game canvas"></canvas>
+
+      <div id="controls">
+        <div class="dpad">
+          <button data-input="up" class="up">▲</button>
+          <button data-input="left" class="left">◀</button>
+          <button data-input="right" class="right">▶</button>
+          <button data-input="down" class="down">▼</button>
+        </div>
+        <div class="actions">
+          <button data-input="jump" class="jump">JUMP</button>
+          <button data-input="attack" class="attack">KICK</button>
+          <button data-input="special" class="special">SPECIAL</button>
+        </div>
+      </div>
+
+      <div id="overlay" class="hidden">
+        <div>
+          <h2 id="overlayTitle">GAME OVER</h2>
+          <p id="overlayText"></p>
+          <button id="restart">RESTART</button>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>キーボード：← → で向き変更、↑/↓＋Xで上段/下段、Xで中段、Zでジャンプ、Spaceで必殺。</p>
+    </footer>
+  </main>
+  <script src="main.js"></script>
+</body>
+</html>

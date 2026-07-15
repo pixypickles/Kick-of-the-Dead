@@ -251,24 +251,57 @@
 
   function spawnEnemy() {
     const side = Math.random() < .5 ? -1 : 1;
+    const difficultyName = state.difficultyName;
     const r = Math.random();
 
+    // EASY has fewer moving-height enemies.
+    const yellowChance =
+      difficultyName === "easy" ? 0.08 :
+      difficultyName === "normal" ? 0.16 : 0.22;
+
+    const redChance =
+      difficultyName === "easy" ? 0.025 :
+      difficultyName === "normal" ? 0.08 : 0.14;
+
     let enemy;
-    if (r < .34) {
+
+    if (r < yellowChance) {
+      enemy = {
+        type:"skullYellowBounce",
+        height:1,
+        minHeight:1,
+        maxHeight:2,
+        speed:96,
+        score:210,
+        bounceSpeed:0.0042,
+        phase:Math.random()*Math.PI*2
+      };
+    } else if (r < yellowChance + redChance) {
+      enemy = {
+        type:"skullRedBounce",
+        height:1,
+        minHeight:1,
+        maxHeight:3,
+        speed:88,
+        score:280,
+        bounceSpeed:0.0034,
+        phase:Math.random()*Math.PI*2
+      };
+    } else if (r < 0.39) {
       enemy = {
         type:"skullLow",
         height:1,
         speed:118,
         score:130
       };
-    } else if (r < .67) {
+    } else if (r < 0.70) {
       enemy = {
         type:"skullMid",
         height:2,
         speed:102,
         score:155
       };
-    } else if (r < .88) {
+    } else if (r < 0.90) {
       enemy = {
         type:"batHigh",
         height:3,
@@ -379,6 +412,29 @@
     }
   }
 
+  function updateEnemyBounce(enemy, dt) {
+    if (enemy.type !== "skullYellowBounce" && enemy.type !== "skullRedBounce") return;
+
+    enemy.phase += enemy.bounceSpeed * dt;
+
+    // Smoothly move between the target attack lanes.
+    const wave = (Math.sin(enemy.phase) + 1) / 2;
+    const minLane = heightLanes[enemy.minHeight];
+    const maxLane = heightLanes[enemy.maxHeight];
+
+    enemy.hitY = minLane.hitY + (maxLane.hitY - minLane.hitY) * wave;
+    enemy.y = minLane.baseY + (maxLane.baseY - minLane.baseY) * wave;
+
+    // The current vulnerable lane changes at clear thresholds.
+    if (enemy.type === "skullYellowBounce") {
+      enemy.height = wave < 0.5 ? 1 : 2;
+    } else {
+      if (wave < 0.34) enemy.height = 1;
+      else if (wave < 0.67) enemy.height = 2;
+      else enemy.height = 3;
+    }
+  }
+
   function update(dt) {
     if (!state.running) return;
 
@@ -442,6 +498,8 @@
 
     for (const e of state.enemies) {
       if (e.dead) continue;
+
+      updateEnemyBounce(e, dt);
       e.x += -e.side * e.speed * dt / 1000;
 
       if (Math.abs(e.x-p.x) < 54) {
@@ -518,15 +576,32 @@
     ctx.translate(e.x,e.y);
     ctx.scale(e.side,1);
 
-    const isSkull = e.type === "skullLow" || e.type === "skullMid";
+    const isSkull =
+      e.type === "skullLow" ||
+      e.type === "skullMid" ||
+      e.type === "skullYellowBounce" ||
+      e.type === "skullRedBounce";
+
     const isBat = e.type === "batHigh" || e.type === "batTop";
 
     if (isSkull) {
-      // Single-point target centered on the skull.
-      const size = e.type === "skullLow" ? 35 : 40;
+      const size =
+        e.type === "skullLow" ? 35 :
+        e.type === "skullMid" ? 40 : 39;
 
-      ctx.fillStyle = "#e9e3d2";
-      ctx.strokeStyle = "#716c63";
+      const isYellow = e.type === "skullYellowBounce";
+      const isRed = e.type === "skullRedBounce";
+
+      ctx.fillStyle =
+        isYellow ? "#f1cb42" :
+        isRed ? "#bd3a3a" :
+        "#e9e3d2";
+
+      ctx.strokeStyle =
+        isYellow ? "#7c651e" :
+        isRed ? "#641f1f" :
+        "#716c63";
+
       ctx.lineWidth = 6;
 
       ctx.beginPath();
@@ -542,12 +617,15 @@
 
       ctx.fillRect(-size*.42,-size*.58,size*.84,size*.42);
 
-      ctx.fillStyle = "#e9e3d2";
+      ctx.fillStyle =
+        isYellow ? "#f1cb42" :
+        isRed ? "#bd3a3a" :
+        "#e9e3d2";
+
       for (let i=-2;i<=2;i++) {
         ctx.fillRect(i*size*.16-size*.045,-size*.58,size*.09,size*.42);
       }
 
-      // A faint glow makes the floating mid skull easier to read.
       if (e.type === "skullMid") {
         ctx.strokeStyle = "rgba(160,220,255,.45)";
         ctx.lineWidth = 5;
@@ -556,8 +634,17 @@
         ctx.stroke();
       }
 
+      if (isYellow || isRed) {
+        ctx.strokeStyle = isYellow
+          ? "rgba(255,225,80,.58)"
+          : "rgba(255,80,80,.58)";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(0,-size,size+10,0,Math.PI*2);
+        ctx.stroke();
+      }
+
     } else if (isBat) {
-      // Single-point target centered on the bat's body.
       const scale = e.type === "batTop" ? 1.08 : 1;
 
       ctx.scale(scale,scale);
@@ -584,7 +671,6 @@
       ctx.fillRect(6,-51,7,7);
     }
 
-    // Keep the temporary lane number visible for testing.
     ctx.fillStyle="#fff";
     ctx.font="700 18px sans-serif";
     ctx.textAlign="center";

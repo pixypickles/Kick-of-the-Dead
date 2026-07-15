@@ -115,6 +115,7 @@
 
   const input = {
     up:false,down:false,left:false,right:false,
+    downLeft:false,downRight:false,
     jump:false,attack:false,special:false
   };
 
@@ -161,6 +162,7 @@
 
   const keyMap = {
     ArrowUp:"up",ArrowDown:"down",ArrowLeft:"left",ArrowRight:"right",
+    q:"downLeft",Q:"downLeft",e:"downRight",E:"downRight",
     z:"jump",Z:"jump",x:"attack",X:"attack"," ":"special"
   };
 
@@ -212,8 +214,8 @@
     if (!state?.running) return;
     const p = state.player;
 
-    if (key === "left") state.facing = -1;
-    if (key === "right") state.facing = 1;
+    if (key === "left" || key === "downLeft") state.facing = -1;
+    if (key === "right" || key === "downRight") state.facing = 1;
 
     if (key === "jump" && p.grounded && p.action !== "special") {
       p.grounded = false;
@@ -231,7 +233,8 @@
         p.hitDone = false;
         p.attackSerial++;
       } else if (p.action === "neutral") {
-        p.action = input.up ? "high" : input.down ? "low" : "mid";
+        const lowRequested = input.down || input.downLeft || input.downRight;
+        p.action = input.up ? "high" : lowRequested ? "low" : "mid";
         p.actionTimer = 0;
         p.hitDone = false;
         p.attackSerial++;
@@ -341,6 +344,21 @@
   }
 
   function currentAttackY() {
+    const p = state.player;
+
+    if (p.action === "jumpAttack") {
+      // Map the actual jump height to all four attack lanes.
+      // Near the ground the kick can hit LOW; at the high-jump apex it reaches TOP.
+      const highestExpectedY = 335;
+      const progress = Math.max(
+        0,
+        Math.min(1, (GROUND - p.y) / (GROUND - highestExpectedY))
+      );
+
+      return heightLanes[1].hitY +
+        (heightLanes[4].hitY - heightLanes[1].hitY) * progress;
+    }
+
     const height = currentAttackHeight();
     return heightLanes[height]?.hitY ?? GROUND;
   }
@@ -364,11 +382,16 @@
     const height = currentAttackHeight();
     const attackY = currentAttackY();
     const horizontalRange = p.action === "jumpAttack" ? 335 : 285;
-    const verticalTolerance = p.action === "jumpAttack" ? 90 : 72;
+    const verticalTolerance = p.action === "jumpAttack" ? 105 : 72;
     let hitsThisFrame = 0;
 
     for (const e of state.enemies) {
-      if (e.dead || e.side !== state.facing || e.lastHitSerial === p.attackSerial) continue;
+      const enemyDirection = e.x < p.x ? -1 : 1;
+      if (
+        e.dead ||
+        enemyDirection !== state.facing ||
+        e.lastHitSerial === p.attackSerial
+      ) continue;
 
       const horizontalMatch = Math.abs(e.x - p.x) <= horizontalRange;
       const verticalMatch = Math.abs(e.hitY - attackY) <= verticalTolerance;
@@ -442,6 +465,21 @@
     const p = state.player;
     p.actionTimer += dt;
     p.invuln = Math.max(0,p.invuln-dt);
+
+    // Holding left/right (including diagonals) moves the master a short distance.
+    // The center zone is intentionally limited so the game remains a two-sided defense game.
+    if (p.specialTimer <= 0) {
+      const moveLeft = input.left || input.downLeft;
+      const moveRight = input.right || input.downRight;
+      const moveDirection = (moveRight ? 1 : 0) - (moveLeft ? 1 : 0);
+
+      if (moveDirection !== 0) {
+        state.facing = moveDirection;
+        const moveSpeed = p.grounded ? 115 : 72;
+        p.x += moveDirection * moveSpeed * dt / 1000;
+        p.x = Math.max(W * 0.32, Math.min(W * 0.68, p.x));
+      }
+    }
 
     if (!p.grounded) {
       p.vy += 2150 * dt / 1000;

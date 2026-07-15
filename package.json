@@ -1,0 +1,10 @@
+{
+  "name": "kick-of-the-dead",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Mobile HTML5 action game prototype",
+  "scripts": {
+    "serve": "python -m http.server 8000"
+  },
+  "license": "UNLICENSED"
+}

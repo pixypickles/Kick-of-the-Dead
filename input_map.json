@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "controls": {
+    "left": "face_left",
+    "right": "face_right",
+    "attack": "mid_kick",
+    "up+attack": "high_kick",
+    "down+attack": "low_kick",
+    "jump": "normal_jump",
+    "up+jump": "high_jump",
+    "air+attack": "jump_attack"
+  }
+}

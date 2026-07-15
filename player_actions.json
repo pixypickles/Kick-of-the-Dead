@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "actions": [
+    {
+      "id": "neutral",
+      "height": 0,
+      "damage": 0,
+      "startup_ms": 0,
+      "active_ms": 0,
+      "recovery_ms": 0,
+      "sprite": "neutral.png"
+    },
+    {
+      "id": "low_kick",
+      "height": 1,
+      "damage": 1,
+      "startup_ms": 90,
+      "active_ms": 70,
+      "recovery_ms": 100,
+      "sprites": [
+        "low_kick_start.png",
+        "low_kick_hit.png",
+        "low_kick_start.png"
+      ]
+    },
+    {
+      "id": "mid_kick",
+      "height": 2,
+      "damage": 1,
+      "startup_ms": 80,
+      "active_ms": 70,
+      "recovery_ms": 90,
+      "sprites": [
+        "mid_kick_start.png",
+        "mid_kick_hit.png",
+        "mid_kick_start.png"
+      ]
+    },
+    {
+      "id": "high_kick",
+      "height": 3,
+      "damage": 1,
+      "startup_ms": 110,
+      "active_ms": 80,
+      "recovery_ms": 120,
+      "sprites": [
+        "high_kick_start.png",
+        "high_kick_hit.png",
+        "high_kick_start.png"
+      ]
+    },
+    {
+      "id": "jump_attack",
+      "height": 4,
+      "damage": 2,
+      "startup_ms": 100,
+      "active_ms": 120,
+      "recovery_ms": 160,
+      "sprites": [
+        "jump_attack_start.png",
+        "jump_attack_hit.png",
+        "landing.png"
+      ]
+    },
+    {
+      "id": "high_jump_attack",
+      "height": 5,
+      "damage": 2,
+      "startup_ms": 120,
+      "active_ms": 120,
+      "recovery_ms": 180,
+      "sprites": [
+        "jump_attack_start.png",
+        "jump_attack_hit.png",
+        "landing.png"
+      ],
+      "enabled": false
+    }
+  ]
+}

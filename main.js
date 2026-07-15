@@ -255,35 +255,45 @@
     const r = Math.random();
 
     let enemy;
-    if (r < .34) {
-      enemy = {type:"zombie",height:2,speed:90,score:100};
+    if (r < .31) {
+      enemy = {
+        type:"zombieDog",
+        height:1,
+        speed:125,
+        score:130
+      };
     } else if (r < .62) {
       enemy = {
-        type:"skeleton",
-        height:Math.random()<.5 ? 1 : 3,
-        speed:103,
+        type:"floatingSkull",
+        height:2,
+        speed:100,
         score:150
       };
-    } else if (r < .84) {
-      enemy = {type:"crawler",height:1,speed:120,score:175};
+    } else if (r < .85) {
+      enemy = {
+        type:"zombieCrow",
+        height:3,
+        speed:112,
+        score:180
+      };
     } else {
       const height = Math.random() < .35 ? 5 : 4;
-      enemy = {type:"demon",height,speed:108,score:220};
+      enemy = {
+        type:"demon",
+        height,
+        speed:108,
+        score:220
+      };
     }
 
     enemy.speed *= state.difficulty.enemySpeed;
     const lane = heightLanes[enemy.height];
 
-    // Small offsets make the lineup feel organic without breaking hit alignment.
-    let visualOffset = 0;
-    if (enemy.type === "crawler") visualOffset = 10;
-    if (enemy.type === "skeleton" && enemy.height === 3) visualOffset = -6;
-
     state.enemies.push({
       ...enemy,
       side,
       x:side<0?-90:W+90,
-      y:lane.baseY + visualOffset,
+      y:lane.baseY,
       hitY:lane.hitY,
       dead:false,
       lastHitSerial:-1
@@ -341,13 +351,7 @@
       const horizontalMatch = Math.abs(e.x - p.x) <= horizontalRange;
       const verticalMatch = Math.abs(e.hitY - attackY) <= verticalTolerance;
 
-      // Normal zombies remain slightly forgiving between middle and high kicks.
-      const forgivingZombie =
-        e.type === "zombie" &&
-        [2,3].includes(height) &&
-        Math.abs(e.hitY - attackY) <= 105;
-
-      if (horizontalMatch && (verticalMatch || forgivingZombie)) {
+      if (horizontalMatch && verticalMatch) {
         e.lastHitSerial = p.attackSerial;
         defeatEnemy(e);
         hitsThisFrame++;
@@ -358,11 +362,18 @@
     }
   }
 
-  function defeatEnemy(enemy) {
+  function defeatEnemy(enemy, grantSpecial = true) {
     if (enemy.dead) return;
     enemy.dead = true;
     state.score += enemy.score;
-    state.special = Math.min(100, state.special + state.difficulty.specialGain);
+
+    if (grantSpecial) {
+      state.special = Math.min(
+        100,
+        state.special + state.difficulty.specialGain
+      );
+    }
+
     burst(enemy.x, enemy.y - 70, 12);
     updateHud();
   }
@@ -415,7 +426,7 @@
       p.action = "special";
       if (p.actionTimer > 430) {
         for (const e of state.enemies) {
-          if (!e.dead) defeatEnemy(e);
+          if (!e.dead) defeatEnemy(e, false);
         }
         if (Math.random() < .25) burst(p.x + state.facing*260, p.y - 170, 2);
       }
@@ -446,7 +457,7 @@
 
       if (Math.abs(e.x-p.x) < 54) {
         if (p.specialTimer > 0) {
-          defeatEnemy(e);
+          defeatEnemy(e, false);
         } else if (p.invuln <= 0) {
           p.invuln = state.difficulty.invuln;
           state.hp -= 1;
@@ -518,41 +529,110 @@
     ctx.translate(e.x,e.y);
     ctx.scale(e.side,1);
 
-    if (e.type==="zombie") {
-      ctx.fillStyle="#4e7c54";
-      ctx.fillRect(-32,-115,64,92);
-      ctx.beginPath();ctx.arc(0,-145,34,0,Math.PI*2);ctx.fill();
-      ctx.strokeStyle="#28452d";ctx.lineWidth=14;
+    if (e.type === "zombieDog") {
+      // Low target: compact dog body at ankle height.
+      ctx.fillStyle = "#4f774f";
       ctx.beginPath();
-      ctx.moveTo(-22,-80);ctx.lineTo(-58,-35);
-      ctx.moveTo(22,-80);ctx.lineTo(58,-20);
-      ctx.stroke();
-    } else if (e.type==="skeleton") {
-      ctx.strokeStyle="#eee8d5";ctx.lineWidth=11;
-      ctx.beginPath();ctx.arc(0,-142,27,0,Math.PI*2);ctx.stroke();
+      ctx.ellipse(0,-28,52,24,0,0,Math.PI*2);
+      ctx.fill();
+
       ctx.beginPath();
-      ctx.moveTo(0,-112);ctx.lineTo(0,-42);
-      ctx.moveTo(-35,-90);ctx.lineTo(35,-90);
-      ctx.moveTo(0,-42);ctx.lineTo(-28,0);
-      ctx.moveTo(0,-42);ctx.lineTo(28,0);
+      ctx.arc(42,-38,24,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = "#263c28";
+      ctx.beginPath();
+      ctx.moveTo(35,-56);
+      ctx.lineTo(48,-78);
+      ctx.lineTo(55,-50);
+      ctx.fill();
+
+      ctx.strokeStyle = "#263c28";
+      ctx.lineWidth = 10;
+      ctx.beginPath();
+      ctx.moveTo(-28,-12); ctx.lineTo(-34,8);
+      ctx.moveTo(15,-10); ctx.lineTo(20,8);
       ctx.stroke();
-      ctx.fillStyle="#606876";
-      ctx.beginPath();ctx.arc(30,-83,34,0,Math.PI*2);ctx.fill();
-    } else if (e.type==="crawler") {
-      ctx.fillStyle="#68597c";
-      ctx.fillRect(-48,-45,96,42);
-      ctx.beginPath();ctx.arc(38,-66,27,0,Math.PI*2);ctx.fill();
+
+      ctx.fillStyle = "#d7ff62";
+      ctx.fillRect(48,-43,7,7);
+
+    } else if (e.type === "floatingSkull") {
+      // Mid target: only the skull itself floats at the hit lane.
+      ctx.fillStyle = "#e8e2d0";
+      ctx.strokeStyle = "#736f66";
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.arc(0,-92,42,0,Math.PI*2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#2a2525";
+      ctx.beginPath();
+      ctx.arc(-15,-100,10,0,Math.PI*2);
+      ctx.arc(15,-100,10,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.fillRect(-15,-70,30,18);
+      ctx.fillStyle = "#e8e2d0";
+      for(let i=-10;i<=10;i+=10){
+        ctx.fillRect(i,-70,5,18);
+      }
+
+    } else if (e.type === "zombieCrow") {
+      // High target: flying crow, centered on the upper kick lane.
+      ctx.fillStyle = "#25252b";
+      ctx.beginPath();
+      ctx.ellipse(0,-68,38,24,0,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(-15,-72);
+      ctx.lineTo(-72,-112);
+      ctx.lineTo(-48,-54);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(15,-72);
+      ctx.lineTo(72,-112);
+      ctx.lineTo(48,-54);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(30,-72);
+      ctx.lineTo(70,-60);
+      ctx.lineTo(32,-52);
+      ctx.fill();
+
+      ctx.fillStyle = "#a8ff54";
+      ctx.fillRect(18,-77,7,7);
+
     } else {
+      // Highest lanes unchanged: flying demon.
       ctx.fillStyle="#7e2c2c";
-      ctx.beginPath();ctx.arc(0,-42,32,0,Math.PI*2);ctx.fill();
-      ctx.beginPath();ctx.moveTo(-25,-50);ctx.lineTo(-76,-92);ctx.lineTo(-55,-25);ctx.fill();
-      ctx.beginPath();ctx.moveTo(25,-50);ctx.lineTo(76,-92);ctx.lineTo(55,-25);ctx.fill();
+      ctx.beginPath();
+      ctx.arc(0,-42,32,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(-25,-50);
+      ctx.lineTo(-76,-92);
+      ctx.lineTo(-55,-25);
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(25,-50);
+      ctx.lineTo(76,-92);
+      ctx.lineTo(55,-25);
+      ctx.fill();
+
       ctx.fillStyle="#ffdc5c";
-      ctx.fillRect(-16,-48,8,8);ctx.fillRect(8,-48,8,8);
+      ctx.fillRect(-16,-48,8,8);
+      ctx.fillRect(8,-48,8,8);
     }
 
     ctx.fillStyle="#fff";
-    ctx.font="700 20px sans-serif";
+    ctx.font="700 18px sans-serif";
     ctx.textAlign="center";
     ctx.fillText(String(e.height),0,e.type==="demon"?12:24);
     ctx.restore();

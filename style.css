@@ -116,3 +116,32 @@ button:active,button.active{transform:scale(.94);filter:brightness(1.35)}
 }
 .difficulty-buttons button:active{transform:scale(.985)}
 #loadingHint{margin:16px 0 0;font-size:.8rem;opacity:.65}
+
+
+/* v0.6: difficulty selector uses the full viewport and can scroll */
+#difficultyOverlay{
+  position:fixed;
+  inset:0;
+  z-index:100;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  padding:
+    max(14px, env(safe-area-inset-top))
+    max(12px, env(safe-area-inset-right))
+    max(14px, env(safe-area-inset-bottom))
+    max(12px, env(safe-area-inset-left));
+}
+.difficulty-panel{
+  margin:auto;
+  max-height:calc(100dvh - 28px);
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+@media (max-width:420px){
+  .difficulty-panel{padding:18px 14px}
+  .difficulty-buttons{gap:9px}
+  .difficulty-buttons button{padding:12px 14px}
+  .difficulty-panel h2{font-size:1.55rem}
+  .difficulty-subtitle{margin-bottom:12px}
+  #loadingHint{margin-top:11px}
+}

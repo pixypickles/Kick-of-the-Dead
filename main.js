@@ -46,6 +46,18 @@
     }
   };
 
+  // Hit lanes are actual vertical positions on the canvas.
+  // Enemies are drawn around these lanes so their visible position matches
+  // the kick that can hit them.
+  const heightLanes = {
+    1: { hitY: 555, baseY: 625 }, // low kick
+    2: { hitY: 470, baseY: 610 }, // middle kick
+    3: { hitY: 365, baseY: 520 }, // high kick
+    4: { hitY: 265, baseY: 350 }, // normal jump attack
+    5: { hitY: 170, baseY: 255 }  // high jump attack
+  };
+
+
   const imageFiles = {
     neutral: "neutral.webp",
     midStart: "mid_kick_start.webp",
@@ -244,22 +256,35 @@
 
     let enemy;
     if (r < .34) {
-      enemy = {type:"zombie",height:2,speed:90,score:100,y:GROUND};
+      enemy = {type:"zombie",height:2,speed:90,score:100};
     } else if (r < .62) {
-      enemy = {type:"skeleton",height:Math.random()<.5?1:3,speed:103,score:150,y:GROUND};
+      enemy = {
+        type:"skeleton",
+        height:Math.random()<.5 ? 1 : 3,
+        speed:103,
+        score:150
+      };
     } else if (r < .84) {
-      enemy = {type:"crawler",height:1,speed:120,score:175,y:GROUND+18};
+      enemy = {type:"crawler",height:1,speed:120,score:175};
     } else {
       const height = Math.random() < .35 ? 5 : 4;
-      enemy = {type:"demon",height,speed:108,score:220,y:height===5?235:330};
+      enemy = {type:"demon",height,speed:108,score:220};
     }
 
     enemy.speed *= state.difficulty.enemySpeed;
+    const lane = heightLanes[enemy.height];
+
+    // Small offsets make the lineup feel organic without breaking hit alignment.
+    let visualOffset = 0;
+    if (enemy.type === "crawler") visualOffset = 10;
+    if (enemy.type === "skeleton" && enemy.height === 3) visualOffset = -6;
 
     state.enemies.push({
       ...enemy,
       side,
       x:side<0?-90:W+90,
+      y:lane.baseY + visualOffset,
+      hitY:lane.hitY,
       dead:false,
       lastHitSerial:-1
     });
@@ -273,6 +298,21 @@
     if (a === "jumpAttack") return state.player.y < 360 ? 5 : 4;
     return 0;
   }
+
+  function currentAttackY() {
+    const p = state.player;
+    const height = currentAttackHeight();
+
+    if (height === 4 || height === 5) {
+      // Air attack height follows the player, but snaps near the intended lane.
+      const laneY = heightLanes[height].hitY;
+      const playerKickY = p.y - 185;
+      return (laneY + playerKickY) / 2;
+    }
+
+    return heightLanes[height]?.hitY ?? GROUND;
+  }
+
 
   function isAttackActive() {
     const p = state.player;
@@ -290,24 +330,28 @@
     if (!isAttackActive()) return;
 
     const height = currentAttackHeight();
-    const range = p.action === "jumpAttack" ? 335 : 285;
+    const attackY = currentAttackY();
+    const horizontalRange = p.action === "jumpAttack" ? 335 : 285;
+    const verticalTolerance = p.action === "jumpAttack" ? 85 : 70;
     let hitsThisFrame = 0;
 
     for (const e of state.enemies) {
       if (e.dead || e.side !== state.facing || e.lastHitSerial === p.attackSerial) continue;
 
-      const closeEnough = Math.abs(e.x - p.x) <= range;
-      const validHeight =
-        e.height === height ||
-        (e.type === "zombie" && [2,3].includes(height));
+      const horizontalMatch = Math.abs(e.x - p.x) <= horizontalRange;
+      const verticalMatch = Math.abs(e.hitY - attackY) <= verticalTolerance;
 
-      if (closeEnough && validHeight) {
+      // Normal zombies remain slightly forgiving between middle and high kicks.
+      const forgivingZombie =
+        e.type === "zombie" &&
+        [2,3].includes(height) &&
+        Math.abs(e.hitY - attackY) <= 105;
+
+      if (horizontalMatch && (verticalMatch || forgivingZombie)) {
         e.lastHitSerial = p.attackSerial;
         defeatEnemy(e);
         hitsThisFrame++;
 
-        // Ground kicks may clear two tightly packed enemies.
-        // Jump attacks can sweep a larger group.
         const maxHits = p.action === "jumpAttack" ? 4 : 2;
         if (hitsThisFrame >= maxHits) break;
       }
@@ -452,6 +496,21 @@
     }
     ctx.fillStyle = "rgba(0,0,0,.25)";
     ctx.fillRect(0,GROUND+12,W,H-GROUND);
+
+    // Very subtle height guides help verify that attacks and enemies align.
+    ctx.save();
+    ctx.setLineDash([8,14]);
+    ctx.lineWidth = 1;
+    ctx.font = "700 13px sans-serif";
+    ctx.textAlign = "left";
+    for (const [height, lane] of Object.entries(heightLanes)) {
+      ctx.strokeStyle = "rgba(255,255,255,.055)";
+      ctx.beginPath();
+      ctx.moveTo(0,lane.hitY);
+      ctx.lineTo(W,lane.hitY);
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   function drawEnemy(e) {
@@ -495,7 +554,7 @@
     ctx.fillStyle="#fff";
     ctx.font="700 20px sans-serif";
     ctx.textAlign="center";
-    ctx.fillText(String(e.height),0,28);
+    ctx.fillText(String(e.height),0,e.type==="demon"?12:24);
     ctx.restore();
   }
 

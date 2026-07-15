@@ -47,19 +47,19 @@
   };
 
   const imageFiles = {
-    neutral: "neutral.png",
-    midStart: "mid_kick_start.png",
-    midHit: "mid_kick_hit.png",
-    lowStart: "low_kick_start.png",
-    lowHit: "low_kick_hit.png",
-    highStart: "high_kick_start.png",
-    highHit: "high_kick_hit.png",
-    jump: "jump.png",
-    jumpAttackStart: "jump_attack_start.png",
-    jumpAttackHit: "jump_attack_hit.png",
-    landing: "landing.png",
-    specialPickup: "special_pickup.png",
-    specialFire: "special_fire.png"
+    neutral: "neutral.webp",
+    midStart: "mid_kick_start.webp",
+    midHit: "mid_kick_hit.webp",
+    lowStart: "low_kick_start.webp",
+    lowHit: "low_kick_hit.webp",
+    highStart: "high_kick_start.webp",
+    highHit: "high_kick_hit.webp",
+    jump: "jump.webp",
+    jumpAttackStart: "jump_attack_start.webp",
+    jumpAttackHit: "jump_attack_hit.webp",
+    landing: "landing.webp",
+    specialPickup: "special_pickup.webp",
+    specialFire: "special_fire.webp"
   };
 
   const images = {};
@@ -67,17 +67,40 @@
   let imageFailedCount = 0;
   const imageTotal = Object.keys(imageFiles).length;
 
-  for (const [key, file] of Object.entries(imageFiles)) {
-    const img = new Image();
-    img.onload = () => imageReadyCount++;
-    img.onerror = () => {
-      imageReadyCount++;
-      imageFailedCount++;
-      console.warn("Image load failed:", file);
-    };
-    img.src = new URL(file, document.baseURI).href;
-    images[key] = img;
+  function loadImage(key, file) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => {
+        imageReadyCount++;
+        resolve();
+      };
+      img.onerror = () => {
+        imageReadyCount++;
+        imageFailedCount++;
+        console.warn("Image load failed:", file);
+        resolve();
+      };
+      img.decoding = "async";
+      img.src = new URL(file, document.baseURI).href;
+      images[key] = img;
+    });
   }
+
+  async function loadImagesInPriorityOrder() {
+    // The standing sprite is loaded first so the title screen becomes useful quickly.
+    await loadImage("neutral", imageFiles.neutral);
+
+    const remaining = Object.entries(imageFiles).filter(([key]) => key !== "neutral");
+
+    // Load two at a time to avoid overwhelming slower GitHub Pages/mobile connections.
+    for (let i = 0; i < remaining.length; i += 2) {
+      await Promise.all(
+        remaining.slice(i, i + 2).map(([key, file]) => loadImage(key, file))
+      );
+    }
+  }
+
+  loadImagesInPriorityOrder();
 
   const input = {
     up:false,down:false,left:false,right:false,

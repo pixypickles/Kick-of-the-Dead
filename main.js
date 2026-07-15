@@ -70,7 +70,7 @@
       particles:[],
       player:{
         x:W/2,y:GROUND,vy:0,grounded:true,
-        action:"neutral",actionTimer:0,hitDone:false,
+        action:"neutral",actionTimer:0,hitDone:false,attackSerial:0,
         invuln:0,specialTimer:0
       }
     };
@@ -153,10 +153,12 @@
         p.action = "jumpAttack";
         p.actionTimer = 0;
         p.hitDone = false;
+        p.attackSerial++;
       } else if (p.action === "neutral") {
         p.action = input.up ? "high" : input.down ? "low" : "mid";
         p.actionTimer = 0;
         p.hitDone = false;
+        p.attackSerial++;
       }
       return;
     }
@@ -191,7 +193,8 @@
       ...enemy,
       side,
       x:side<0?-90:W+90,
-      dead:false
+      dead:false,
+      lastHitSerial:-1
     });
   }
 
@@ -217,19 +220,29 @@
 
   function tryKickHit() {
     const p = state.player;
-    if (!isAttackActive() || p.hitDone) return;
-    p.hitDone = true;
+    if (!isAttackActive()) return;
 
     const height = currentAttackHeight();
-    const range = p.action === "jumpAttack" ? 270 : 225;
+    const range = p.action === "jumpAttack" ? 335 : 285;
+    let hitsThisFrame = 0;
 
     for (const e of state.enemies) {
-      if (e.dead || e.side !== state.facing) continue;
+      if (e.dead || e.side !== state.facing || e.lastHitSerial === p.attackSerial) continue;
+
       const closeEnough = Math.abs(e.x - p.x) <= range;
-      const validHeight = e.height === height || (e.type === "zombie" && [2,3].includes(height));
+      const validHeight =
+        e.height === height ||
+        (e.type === "zombie" && [2,3].includes(height));
+
       if (closeEnough && validHeight) {
+        e.lastHitSerial = p.attackSerial;
         defeatEnemy(e);
-        break;
+        hitsThisFrame++;
+
+        // Ground kicks may clear two tightly packed enemies.
+        // Jump attacks can sweep a larger group.
+        const maxHits = p.action === "jumpAttack" ? 4 : 2;
+        if (hitsThisFrame >= maxHits) break;
       }
     }
   }
@@ -306,20 +319,31 @@
     state.spawnTimer -= dt;
     if (state.spawnTimer <= 0) {
       spawnEnemy();
-      state.spawnTimer = Math.max(360,1100-state.elapsed*.014) + Math.random()*360;
+      const sameSideNearEdge = state.enemies.some(e =>
+        !e.dead && e.side === state.enemies[state.enemies.length-1]?.side &&
+        (e.side < 0 ? e.x < 170 : e.x > W-170)
+      );
+      state.spawnTimer =
+        (sameSideNearEdge ? 850 : Math.max(560,1250-state.elapsed*.012))
+        + Math.random()*420;
     }
 
     for (const e of state.enemies) {
       if (e.dead) continue;
       e.x += -e.side * e.speed * dt / 1000;
 
-      if (Math.abs(e.x-p.x) < 72) {
+      if (Math.abs(e.x-p.x) < 54) {
         if (p.specialTimer > 0) {
           defeatEnemy(e);
         } else if (p.invuln <= 0) {
-          p.invuln = 850;
+          p.invuln = 1250;
           state.hp -= 1;
           e.dead = true;
+          for (const other of state.enemies) {
+            if (!other.dead && Math.abs(other.x - p.x) < 120) {
+              other.x += other.side * 85;
+            }
+          }
           burst(p.x,p.y-120,15);
           updateHud();
           if (state.hp <= 0) endGame();

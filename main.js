@@ -68,6 +68,8 @@
     jump: "jump.webp",
     jumpAttackStart: "jump_attack_start.webp",
     jumpAttackHit: "jump_attack_hit.webp",
+    downKickStart: "down_kick_start.webp",
+    downKickHit: "down_kick_hit.webp",
     landing: "landing.webp",
     specialPickup: "special_pickup.webp",
     specialFire: "special_fire.webp"
@@ -228,10 +230,19 @@
 
     if (key === "attack" && p.action !== "special") {
       if (!p.grounded) {
-        p.action = "jumpAttack";
+        const downwardKickRequested =
+          input.down || input.downLeft || input.downRight;
+
+        p.action = downwardKickRequested ? "downKick" : "jumpAttack";
         p.actionTimer = 0;
         p.hitDone = false;
         p.attackSerial++;
+
+        if (p.action === "downKick") {
+          // A short tuck before dropping straight down.
+          p.vy = Math.max(90, p.vy);
+          p.invuln = Math.max(p.invuln, 260);
+        }
       } else if (p.action === "neutral") {
         const lowRequested = input.down || input.downLeft || input.downRight;
         p.action = input.up ? "high" : lowRequested ? "low" : "mid";
@@ -340,11 +351,17 @@
     if (a === "mid") return 2;
     if (a === "high") return 3;
     if (a === "jumpAttack") return 4;
+    if (a === "downKick") return 1;
     return 0;
   }
 
   function currentAttackY() {
     const p = state.player;
+
+    if (p.action === "downKick") {
+      // Feet point straight down. The strike point follows the falling character.
+      return p.y + 18;
+    }
 
     if (p.action === "jumpAttack") {
       // Map the actual jump height to all four attack lanes.
@@ -372,6 +389,9 @@
     if (p.action === "jumpAttack") {
       return p.actionTimer >= 80 && p.actionTimer <= 320;
     }
+    if (p.action === "downKick") {
+      return p.actionTimer >= 115 && p.actionTimer <= 520;
+    }
     return false;
   }
 
@@ -381,15 +401,20 @@
 
     const height = currentAttackHeight();
     const attackY = currentAttackY();
-    const horizontalRange = p.action === "jumpAttack" ? 335 : 285;
-    const verticalTolerance = p.action === "jumpAttack" ? 105 : 72;
+    const horizontalRange =
+      p.action === "downKick" ? 105 :
+      p.action === "jumpAttack" ? 335 : 285;
+
+    const verticalTolerance =
+      p.action === "downKick" ? 125 :
+      p.action === "jumpAttack" ? 105 : 72;
     let hitsThisFrame = 0;
 
     for (const e of state.enemies) {
       const enemyDirection = e.x < p.x ? -1 : 1;
       if (
         e.dead ||
-        enemyDirection !== state.facing ||
+        (p.action !== "downKick" && enemyDirection !== state.facing) ||
         e.lastHitSerial === p.attackSerial
       ) continue;
 
@@ -401,7 +426,7 @@
         defeatEnemy(e);
         hitsThisFrame++;
 
-        const maxHits = p.action === "jumpAttack" ? 4 : 2;
+        const maxHits = p.action === "downKick" ? 5 : p.action === "jumpAttack" ? 4 : 2;
         if (hitsThisFrame >= maxHits) break;
       }
     }
@@ -482,15 +507,35 @@
     }
 
     if (!p.grounded) {
-      p.vy += 2150 * dt / 1000;
+      const gravity = p.action === "downKick" ? 3350 : 2150;
+
+      if (p.action === "downKick" && p.actionTimer < 110) {
+        // Brief compact preparation pose.
+        p.vy = Math.max(80, p.vy);
+      } else if (p.action === "downKick") {
+        p.vy = Math.max(760, p.vy);
+      }
+
+      p.vy += gravity * dt / 1000;
       p.y += p.vy * dt / 1000;
 
       if (p.y >= GROUND) {
         p.y = GROUND;
         p.vy = 0;
         p.grounded = true;
+        const landedFromDownKick = p.action === "downKick";
         p.action = p.action === "special" ? "special" : "landing";
         p.actionTimer = 0;
+
+        if (landedFromDownKick) {
+          burst(p.x, GROUND - 18, 28);
+
+          for (const e of state.enemies) {
+            if (!e.dead && Math.abs(e.x - p.x) <= 135) {
+              defeatEnemy(e);
+            }
+          }
+        }
       }
     }
 
@@ -543,6 +588,8 @@
       if (Math.abs(e.x-p.x) < 54) {
         if (p.specialTimer > 0) {
           defeatEnemy(e, false);
+        } else if (p.action === "downKick" && isAttackActive()) {
+          defeatEnemy(e);
         } else if (p.invuln <= 0) {
           p.invuln = state.difficulty.invuln;
           state.hp -= 1;
@@ -726,6 +773,9 @@
     if (p.action==="jumpAttack") {
       return p.actionTimer<120 ? images.jumpAttackStart : images.jumpAttackHit;
     }
+    if (p.action==="downKick") {
+      return p.actionTimer<115 ? images.downKickStart : images.downKickHit;
+    }
     if (p.action==="landing") return images.landing;
     if (p.action==="low") {
       return p.actionTimer<120 || p.actionTimer>260 ? images.lowStart : images.lowHit;
@@ -759,7 +809,10 @@
 
     if (p.invuln>0 && Math.floor(p.invuln/80)%2===0) ctx.globalAlpha=.35;
 
-    const h = p.action==="special" ? 430 : 390;
+    const h =
+      p.action === "special" ? 430 :
+      p.action === "downKick" ? 360 :
+      390;
     const w = h;
 
     if (img && img.complete && img.naturalWidth>0) {

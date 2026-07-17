@@ -196,3 +196,54 @@ button:active,button.active{transform:scale(.94);filter:brightness(1.35)}
 .actions button.active {
   opacity: .94;
 }
+
+
+/* v1.2: mobile long-press / copy / translate / drag prevention */
+html,
+body,
+#app,
+.game-shell,
+.game-area,
+canvas,
+.controls,
+.dpad,
+.actions,
+button,
+[role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body,
+#app,
+.game-shell,
+.game-area,
+canvas,
+.controls {
+  touch-action: none;
+  overscroll-behavior: none;
+}
+
+.dpad button,
+.actions button,
+#specialButton,
+button[data-input] {
+  touch-action: none;
+  -webkit-user-drag: none;
+  user-drag: none;
+  outline: none;
+}
+
+img,
+canvas {
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+button:focus,
+button:focus-visible {
+  outline: none;
+}
